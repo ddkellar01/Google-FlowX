@@ -1,44 +1,39 @@
-name: Continuous Integration
+name: Google-FlowX CI/CD Pipeline
 
 on:
   push:
-    branches: [ "main", "alpha-one" ]
-  pull_request:
     branches: [ "main" ]
 
+env:
+  PROJECT_ID: ${{ secrets.GCP_PROJECT_ID }}
+  GKE_CLUSTER: flowx-production-cluster
+  ZONE: us-central1-a
+  IMAGE_NAME: google-flowx
+
 jobs:
-  test-and-build:
+  deploy:
     runs-on: ubuntu-latest
+    permissions:
+      contents: 'read'
+      id-token: 'write'
+
     steps:
       - name: Checkout Repository
         uses: actions/checkout@v4
 
-      - name: Install Rust Toolchain
-        uses: dtolnay/rust-toolchain@stable
+      - name: Authenticate to Google Cloud
+        uses: google-github-actions/auth@v2
         with:
-          components: clippy, rustfmt
+          credentials_json: ${{ secrets.GCP_SA_KEY }}
 
-      - name: Install Python
-        uses: actions/setup-python@v5
-        with:
-          python-version: '3.11'
+      - name: Set up Cloud SDK
+        uses: google-github-actions/setup-gcloud@v2
 
-      - name: Install Foundry (Solidity)
-        uses: foundry-rs/foundry-toolchain@v1
-
-      - name: Rust Core Lint & Build
+      - name: Configure Docker for GCP
         run: |
-          cargo fmt
-          cargo clippy -- -D warnings
-          cargo build --release
+          gcloud auth configure-docker us-central1-docker.pkg.dev --quiet
 
-      - name: Cognitive Engine Unit Tests
+      - name: Build and Push Container Image
         run: |
-          cd cognitive_engine
-          pip install -r requirements.txt
-          pytest tests/
-
-      - name: EVM Smart Contract Tests
-        run: |
-          cd contracts
-          forge test -vvv
+          docker build -t us-central1-docker.pkg.dev/${{ env.PROJECT_ID }}/${{ env.IMAGE_NAME }}/${{ env.IMAGE_NAME }}:${{ github.sha }} .
+          docker push us-central1-docker.pkg.dev/${{ env.PROJECT_ID }}/${{ env.IMAGE_NAME }}/${{ env.IMAGE_NAME }}:${{ github.sha }}
