@@ -1,10 +1,9 @@
-# Use official lightweight Python image
-FROM python:3.10-slim
+# Upgrade to Python 3.11 to satisfy updated ML dependencies
+FROM python:3.11-slim
 
-# Set working directory inside the container
 WORKDIR /app
 
-# Install system dependencies required for OpenCV, FFmpeg, and ML libraries
+# Install system dependencies required by your packages
 RUN apt-get update && apt-get install -y \
     ffmpeg \
     libgl1 \
@@ -15,17 +14,13 @@ RUN apt-get update && apt-get install -y \
 # Upgrade pip
 RUN pip install --no-cache-dir --upgrade pip
 
-# Copy requirements file first for optimal caching
-COPY requirements.txt /app/
+# Copy requirements first to leverage Docker layer caching
+COPY requirements.txt .
 
 # Install python dependencies from requirements.txt
 RUN pip install --no-cache-dir -r requirements.txt
 
 # Copy the rest of the project structure into the container
-COPY . /app
+COPY . .
 
-# Expose API port for the Gateway
-EXPOSE 8000
-
-# Default command to start the API gateway / orchestration router
-CMD ["uvicorn", "orchestrator.api_gateway:app", "--host", "0.0.0.0", "--port", "8000"]
+# Add your startup command here if needed (e.g., CMD ["python", "app.py"])
