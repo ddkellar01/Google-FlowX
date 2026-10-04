@@ -1,89 +1,44 @@
-name: Google-FlowX CI/CD Pipeline
+name: Continuous Integration
 
 on:
   push:
-    branches: [ "main", "master" ]
+    branches: [ "main", "alpha-one" ]
   pull_request:
-    branches: [ "main", "master" ]
-
-env:
-  PROJECT_ID: ${{ secrets.GCP_PROJECT_ID || 'mock-project' }}
-  GKE_CLUSTER: flowx-production-cluster
-  ZONE: us-central1-a
-  IMAGE_NAME: google-flowx
-  DOCKERHUB_REPO: your-dockerhub-username/google-flowx
+    branches: [ "main" ]
 
 jobs:
-  lint-and-unit-test:
-    name: Lint & Unit Tests
+  test-and-build:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout Repository
         uses: actions/checkout@v4
 
-      - name: Set up Python 3.10
+      - name: Install Rust Toolchain
+        uses: dtolnay/rust-toolchain@stable
+        with:
+          components: clippy, rustfmt
+
+      - name: Install Python
         uses: actions/setup-python@v5
         with:
-          python-version: "3.10"
+          python-version: '3.11'
 
-      - name: Install Dependencies
+      - name: Install Foundry (Solidity)
+        uses: foundry-rs/foundry-toolchain@v1
+
+      - name: Rust Core Lint & Build
         run: |
-          python -m pip install --upgrade pip
-          pip install flake8 pytest opencv-python-headless numpy google-cloud-aiplatform vertexai tensorflow
+          cargo fmt
+          cargo clippy -- -D warnings
+          cargo build --release
 
-      - name: Lint with flake8
+      - name: Cognitive Engine Unit Tests
         run: |
-          flake8 . --count --select=E9,F63,F7,F82 --show-source --statistics
-          flake8 . --count --exit-zero --max-complexity=10 --max-line-length=127 --statistics
+          cd cognitive_engine
+          pip install -r requirements.txt
+          pytest tests/
 
-      - name: Run Unit Tests
+      - name: EVM Smart Contract Tests
         run: |
-          pytest tests/ || echo "No unit tests directory found yet, skipping..."
-
-  matrix-validation-qa:
-    name: 1000-Run Matrix Test Validation
-    needs: lint-and-unit-test
-    runs-on: ubuntu-latest
-    steps:
-      - name: Checkout Repository
-        uses: actions/checkout@v4
-
-      - name: Authenticate to Google Cloud (Optional)
-        id: gcp-auth
-        uses: google-github-actions/auth@v2
-        continue-on-error: true
-        with:
-          credentials_json: ${{ secrets.GCP_SA_KEY }}
-
-      - name: Trigger Vertex AI Batch Matrix Test
-        run: |
-          if [ "${{ steps.gcp-auth.outcome }}" == "success" ]; then
-            python -m matrix_testing.batch_predictor
-          else
-            echo "GCP credentials not found. Simulating 1000-run matrix test successfully..."
-          fi
-
-  build-and-publish-docker:
-    name: Build & Publish to Docker Hub
-    needs: matrix-validation-qa
-    if: github.ref == 'refs/heads/main' && github.event_name == 'push'
-    runs-on: ubuntu-latest
-    steps:
-      - name: Checkout Repository
-        uses: actions/checkout@v4
-
-      - name: Log in to Docker Hub
-        uses: docker/login-action@v3
-        with:
-          username: ${{ secrets.DOCKERHUB_USERNAME }}
-          password: ${{ secrets.DOCKERHUB_TOKEN }}
-
-      - name: Build and Push to Docker Hub
-        uses: docker/build-push-action@v5
-        with:
-          context: .
-          push: true
-          tags: |
-            ${{ env.DOCKERHUB_REPO }}:latest
-            ${{ env.DOCKERHUB_REPO }}:${{ github.sha }}
-
+          cd contracts
+          forge test -vvv
