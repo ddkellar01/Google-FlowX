@@ -1,4 +1,5 @@
 import tensorflow as tf
+import numpy as np
 
 class ArtifactInpainter:
     """Uses a lightweight diffusion model to cleanly fill in any residual edge artifacts left by the AlphaUnblender."""
