@@ -15,7 +15,7 @@ scikit-learn==1.4.1.post1
 
 # Google Cloud & Vertex AI Integration
 google-cloud-aiplatform==1.44.0
-vertexai==1.44.0
+vertexai==1.46.0
 google-cloud-storage==2.15.0
 google-cloud-logging==3.9.0
 google-cloud-monitoring==2.19.0
