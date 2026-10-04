@@ -1,0 +1,33 @@
+version: '3.8'
+
+services:
+  # Redis cache for scene states, character memory, and fast recovery
+  redis:
+    image: redis:alpine
+    container_name: flowx-redis
+    ports:
+      - "6379:6379"
+    networks:
+      - flowx-net
+
+  # Main API Gateway and Orchestration Engine
+  flowx-api:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: flowx-api-gateway
+    ports:
+      - "8000:8000"
+    environment:
+      - REDIS_HOST=flowx-redis
+      - REDIS_PORT=6379
+      - PROJECT_ID=${GCP_PROJECT_ID:-mock-project}
+    depends_on:
+      - redis
+    networks:
+      - flowx-net
+    command: ["uvicorn", "orchestrator.api_gateway:app", "--host", "0.0.0.0", "--port", "8000", "--reload"]
+
+networks:
+  flowx-net:
+    driver: bridge
