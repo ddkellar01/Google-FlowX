@@ -7,7 +7,7 @@ WORKDIR /app
 # Install system dependencies required for OpenCV, FFmpeg, and ML libraries
 RUN apt-get update && apt-get install -y \
     ffmpeg \
-    libgl1-mesa-glx \
+    libgl1 \
     libglib2.0-0 \
     git \
     && rm -rf /var/lib/apt/lists/*
@@ -15,32 +15,13 @@ RUN apt-get update && apt-get install -y \
 # Upgrade pip
 RUN pip install --no-cache-dir --upgrade pip
 
-# Install project python dependencies
-RUN pip install --no-cache-dir \
-    numpy \
-    opencv-python-headless \
-    tensorflow \
-    torch \
-    torchvision \
-    torchaudio \
-    vertexai \
-    google-cloud-aiplatform \
-    google-cloud-storage \
-    google-cloud-logging \
-    google-cloud-container \
-    google-cloud-monitoring \
-    google-cloud-translate \
-    fastapi \
-    uvicorn \
-    requests \
-    redis \
-    gitpython \
-    pynvml \
-    sentence-transformers \
-    scikit-learn \
-    ffmpeg-python
+# Copy requirements file first for optimal caching
+COPY requirements.txt /app/
 
-# Copy the entire project structure into the container
+# Install python dependencies from requirements.txt
+RUN pip install --no-cache-dir -r requirements.txt
+
+# Copy the rest of the project structure into the container
 COPY . /app
 
 # Expose API port for the Gateway
