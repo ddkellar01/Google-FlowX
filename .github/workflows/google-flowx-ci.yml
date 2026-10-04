@@ -11,6 +11,7 @@ env:
   GKE_CLUSTER: flowx-production-cluster
   ZONE: us-central1-a
   IMAGE_NAME: google-flowx
+  DOCKERHUB_REPO: your-dockerhub-username/google-flowx
 
 jobs:
   lint-and-unit-test:
@@ -62,8 +63,8 @@ jobs:
             echo "GCP credentials not found. Simulating 1000-run matrix test successfully..."
           fi
 
-  build-and-deploy:
-    name: Build & Deploy to GKE
+  build-and-publish-docker:
+    name: Build & Publish to Docker Hub
     needs: matrix-validation-qa
     if: github.ref == 'refs/heads/main' && github.event_name == 'push'
     runs-on: ubuntu-latest
@@ -71,17 +72,17 @@ jobs:
       - name: Checkout Repository
         uses: actions/checkout@v4
 
-      - name: Authenticate to Google Cloud (Optional)
-        id: gcp-auth-deploy
-        uses: google-github-actions/auth@v2
-        continue-on-error: true
+      - name: Log in to Docker Hub
+        uses: docker/login-action@v3
         with:
-          credentials_json: ${{ secrets.GCP_SA_KEY }}
+          username: ${{ secrets.DOCKERHUB_USERNAME }}
+          password: ${{ secrets.DOCKERHUB_TOKEN }}
 
-      - name: Deploy or Simulate Deployment
-        run: |
-          if [ "${{ steps.gcp-auth-deploy.outcome }}" == "success" ]; then
-            echo "Authenticated with GCP. Proceeding with GKE deployment..."
-          else
-            echo "GCP credentials not found. Skipping live deployment simulation..."
-          fi
+      - name: Build and Push to Docker Hub
+        uses: docker/build-push-action@v5
+        with:
+          context: .
+          push: true
+          tags: |
+            ${{ env.DOCKERHUB_REPO }}:latest
+            ${{ env.DOCKERHUB_REPO }}:${{ github.sha }}
