@@ -1,0 +1,33 @@
+# Core Framework & API Gateway
+fastapi==0.110.0
+uvicorn==0.28.0
+pydantic==2.6.4
+requests==2.31.0
+redis==5.0.2
+
+# Machine Learning & AI Libraries
+tensorflow==2.15.0
+torch==2.2.1
+torchvision==0.17.1
+torchaudio==2.2.1
+sentence-transformers==2.5.1
+scikit-learn==1.4.1.post1
+
+# Google Cloud & Vertex AI Integration
+google-cloud-aiplatform==1.44.0
+vertexai==1.44.0
+google-cloud-storage==2.15.0
+google-cloud-logging==3.9.0
+google-cloud-monitoring==2.19.0
+google-cloud-translate==3.14.0
+
+# Computer Vision, Media Processing & Utilities
+opencv-python-headless==4.9.0.80
+numpy==1.26.4
+ffmpeg-python==0.2.0
+gitpython==3.1.42
+pynvml==11.5.0
+
+# Testing & Linting Tools
+pytest==8.1.1
+flake8==7.0.0
